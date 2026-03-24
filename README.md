@@ -1,4 +1,4 @@
-# Mess-Managenemt-System-CS253
+# Mess-Managenemt-System-CS253-
 
 As discussed the Workload has been distrubuted as follows: <br/>
 1)Frontend-> Priyanshi and Jhanani <br/>
