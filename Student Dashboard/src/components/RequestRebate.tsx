@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, AlertCircle } from 'lucide-react';
 
 interface RebateRequest {
-  id: string;
+  id?: string;
   startDate: string;
   endDate: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedDate: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  createdAt: string;
 }
 
 export function RequestRebate() {
@@ -15,27 +15,26 @@ export function RequestRebate() {
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
 
-  // Mock previous rebate requests
-  const [previousRequests, setPreviousRequests] = useState<RebateRequest[]>([
-    {
-      id: '1',
-      startDate: '2026-01-10',
-      endDate: '2026-01-15',
-      reason: 'Going home for family event',
-      status: 'approved',
-      submittedDate: '2026-01-05'
-    },
-    {
-      id: '2',
-      startDate: '2025-12-20',
-      endDate: '2025-12-31',
-      reason: 'Winter break',
-      status: 'approved',
-      submittedDate: '2025-12-15'
-    }
-  ]);
+  const [previousRequests, setPreviousRequests] = useState<RebateRequest[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchRebates = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/rebate/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) setPreviousRequests(data);
+      } catch (err) {
+        console.error('Failed to fetch rebates', err);
+      }
+    };
+    fetchRebates();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!startDate || !endDate) {
@@ -56,15 +55,33 @@ export function RequestRebate() {
       return;
     }
 
-    // Calculate days
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/rebate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ startDate, endDate, reason })
+      });
 
-    alert(`Rebate request submitted successfully!\nDuration: ${days} day(s)\nYour request will be reviewed by the mess manager.`);
-    
-    // Reset form
-    setStartDate('');
-    setEndDate('');
-    setReason('');
+      if (res.ok) {
+        const data = await res.json();
+        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        alert(`Rebate request submitted successfully!\nDuration: ${days} day(s)\nYour request will be reviewed by the mess manager.`);
+        
+        setPreviousRequests([data.rebate, ...previousRequests]);
+        setStartDate('');
+        setEndDate('');
+        setReason('');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to submit rebate request');
+      }
+    } catch (err) {
+      alert('Backend unreachable');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -205,19 +222,19 @@ export function RequestRebate() {
                     </div>
                     <p className="text-sm text-gray-600 mb-2">{request.reason}</p>
                     <p className="text-xs text-gray-500">
-                      Submitted on {formatDate(request.submittedDate)}
+                      Submitted on {formatDate(request.createdAt)}
                     </p>
                   </div>
                   <span
                     className={`px-3 py-1 text-sm rounded-full font-semibold ${
-                      request.status === 'approved'
+                      request.status === 'Approved'
                         ? 'bg-green-100 text-green-800'
-                        : request.status === 'rejected'
+                        : request.status === 'Rejected'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}
                   >
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    {request.status}
                   </span>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, X, Calendar, User } from 'lucide-react';
 
 interface RebateRequest {
@@ -13,43 +13,58 @@ interface RebateRequest {
 }
 
 export function RebateRequests() {
-  const [requests, setRequests] = useState<RebateRequest[]>([
-    {
-      id: '1',
-      studentId: 'ST2301',
-      studentName: 'Rahul Kumar',
-      startDate: '2026-01-25',
-      endDate: '2026-01-30',
-      reason: 'Going home for family function',
-      status: 'pending',
-      requestDate: '2026-01-20',
-    },
-    {
-      id: '2',
-      studentId: 'ST2145',
-      studentName: 'Priya Singh',
-      startDate: '2026-01-22',
-      endDate: '2026-01-24',
-      reason: 'Medical checkup in hometown',
-      status: 'pending',
-      requestDate: '2026-01-19',
-    },
-    {
-      id: '3',
-      studentId: 'ST2089',
-      studentName: 'Amit Sharma',
-      startDate: '2026-02-01',
-      endDate: '2026-02-05',
-      reason: 'Conference attendance',
-      status: 'pending',
-      requestDate: '2026-01-18',
-    },
-  ]);
+  const [requests, setRequests] = useState<RebateRequest[]>([]);
 
-  const handleAction = (id: string, action: 'approved' | 'rejected') => {
-    setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: action } : req))
-    );
+  const fetchRebates = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('http://localhost:5000/api/rebate', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = data.map((r: any) => ({
+          id: r.id,
+          studentId: r.Student?.rollNo || r.StudentRollNo,
+          studentName: r.Student?.name || r.StudentRollNo,
+          startDate: r.startDate,
+          endDate: r.endDate,
+          reason: r.reason,
+          status: r.status.toLowerCase(),
+          requestDate: r.createdAt
+        }));
+        setRequests(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch rebate requests', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRebates();
+  }, []);
+
+  const handleAction = async (id: string, action: 'approved' | 'rejected') => {
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = action === 'approved' ? 'approve' : 'reject';
+      const res = await fetch(`http://localhost:5000/api/rebate/${endpoint}/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        setRequests((prev) =>
+          prev.map((req) => (req.id === id ? { ...req, status: action } : req))
+        );
+      } else {
+        const err = await res.json();
+        alert(err.error || `Failed to ${action} rebate`);
+      }
+    } catch (err) {
+      alert('Backend connection failed');
+    }
   };
 
   const pendingRequests = requests.filter((r) => r.status === 'pending');

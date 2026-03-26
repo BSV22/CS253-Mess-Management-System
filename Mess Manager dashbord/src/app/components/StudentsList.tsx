@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Download } from 'lucide-react';
 
 interface Student {
@@ -15,58 +15,36 @@ interface Student {
 export function StudentsList() {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [students] = useState<Student[]>([
-    {
-      id: '1',
-      name: 'Rahul Kumar',
-      rollNumber: 'ST2301',
-      room: 'A-101',
-      email: 'rahul@iitk.ac.in',
-      phone: '+91 9876543210',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '2',
-      name: 'Priya Singh',
-      rollNumber: 'ST2145',
-      room: 'B-205',
-      email: 'priya@iitk.ac.in',
-      phone: '+91 9876543211',
-      messStatus: 'rebate',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '3',
-      name: 'Amit Sharma',
-      rollNumber: 'ST2089',
-      room: 'C-301',
-      email: 'amit@iitk.ac.in',
-      phone: '+91 9876543212',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '4',
-      name: 'Sneha Patel',
-      rollNumber: 'ST2234',
-      room: 'A-203',
-      email: 'sneha@iitk.ac.in',
-      phone: '+91 9876543213',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '5',
-      name: 'Vikram Reddy',
-      rollNumber: 'ST2156',
-      room: 'B-108',
-      email: 'vikram@iitk.ac.in',
-      phone: '+91 9876543214',
-      messStatus: 'inactive',
-      joinDate: '2023-07-15',
-    },
-  ]);
+  const [students, setStudents] = useState<Student[]>([]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/students', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((st: any) => ({
+            id: st.rollNo,
+            name: st.name,
+            rollNumber: st.rollNo,
+            room: st.roomNo || 'N/A',
+            email: st.email,
+            phone: 'N/A',
+            messStatus: (st.messCardStatus || 'inactive').toLowerCase(),
+            joinDate: st.createdAt
+          }));
+          setStudents(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to fetch students', err);
+      }
+    };
+    fetchStudents();
+  }, []);
 
   const filteredStudents = students.filter(
     (student) =>

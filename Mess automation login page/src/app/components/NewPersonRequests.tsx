@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, X, User, Mail, Phone } from 'lucide-react';
 
 interface PersonRequest {
@@ -13,43 +13,58 @@ interface PersonRequest {
 }
 
 export function NewPersonRequests() {
-  const [requests, setRequests] = useState<PersonRequest[]>([
-    {
-      id: '1',
-      name: 'Ankit Verma',
-      email: 'ankit@iitk.ac.in',
-      phone: '+91 9876543210',
-      rollNumber: 'ST2401',
-      room: 'A-201',
-      requestDate: '2026-01-20',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      name: 'Sneha Patel',
-      email: 'sneha@iitk.ac.in',
-      phone: '+91 9876543211',
-      rollNumber: 'ST2402',
-      room: 'B-105',
-      requestDate: '2026-01-19',
-      status: 'pending',
-    },
-    {
-      id: '3',
-      name: 'Vikram Singh',
-      email: 'vikram@iitk.ac.in',
-      phone: '+91 9876543212',
-      rollNumber: 'ST2403',
-      room: 'C-308',
-      requestDate: '2026-01-18',
-      status: 'pending',
-    },
-  ]);
+  const [requests, setRequests] = useState<PersonRequest[]>([]);
 
-  const handleAction = (id: string, action: 'approved' | 'rejected') => {
-    setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: action } : req))
-    );
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/students/pending', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Map DB students to component state
+          const mapped = data.map((st: any) => ({
+            id: st.rollNo, // use rollNo as ID
+            name: st.name,
+            email: st.email,
+            phone: 'N/A', // Not supported in DB yet
+            rollNumber: st.rollNo,
+            room: st.roomNo || 'N/A',
+            requestDate: st.createdAt,
+            status: st.status.toLowerCase(),
+          }));
+          setRequests(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending requests', err);
+      }
+    };
+    fetchRequests();
+  }, []);
+
+  const handleAction = async (id: string, action: 'approved' | 'rejected') => {
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = action === 'approved' ? 'approve' : 'reject';
+      const res = await fetch(`http://localhost:5000/api/students/${endpoint}/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setRequests((prev) =>
+          prev.map((req) => (req.id === id ? { ...req, status: action } : req))
+        );
+        alert(`Student ${action} successfully.`);
+      } else {
+        const err = await res.json();
+        alert(err.error || `Failed to ${action} student`);
+      }
+    } catch (err) {
+      alert('Backend connection failed');
+    }
   };
 
   const pendingRequests = requests.filter((r) => r.status === 'pending');

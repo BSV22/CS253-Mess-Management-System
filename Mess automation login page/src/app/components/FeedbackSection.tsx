@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Feedback {
@@ -7,68 +7,48 @@ interface Feedback {
   studentName: string;
   date: string;
   rating: number;
-  category: 'food-quality' | 'service' | 'cleanliness' | 'variety' | 'general';
+  category: string;
   message: string;
 }
 
 export function FeedbackSection() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
-  const [feedbacks] = useState<Feedback[]>([
-    {
-      id: '1',
-      studentId: 'ST2301',
-      studentName: 'Rahul Kumar',
-      date: '2026-01-20',
-      rating: 4,
-      category: 'food-quality',
-      message: 'The food quality has improved significantly. Keep up the good work!',
-    },
-    {
-      id: '2',
-      studentId: 'ST2145',
-      studentName: 'Priya Singh',
-      date: '2026-01-20',
-      rating: 3,
-      category: 'variety',
-      message: 'Would appreciate more variety in breakfast options.',
-    },
-    {
-      id: '3',
-      studentId: 'ST2089',
-      studentName: 'Amit Sharma',
-      date: '2026-01-19',
-      rating: 5,
-      category: 'service',
-      message: 'Excellent service! The staff is very courteous and helpful.',
-    },
-    {
-      id: '4',
-      studentId: 'ST2234',
-      studentName: 'Sneha Patel',
-      date: '2026-01-19',
-      rating: 2,
-      category: 'cleanliness',
-      message: 'Dining hall needs better maintenance and cleanliness.',
-    },
-    {
-      id: '5',
-      studentId: 'ST2156',
-      studentName: 'Vikram Reddy',
-      date: '2026-01-18',
-      rating: 4,
-      category: 'general',
-      message: 'Overall satisfied with the mess facilities.',
-    },
-  ]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/feedback', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((f: any) => ({
+            id: f.id,
+            studentId: f.Student?.rollNo || f.StudentRollNo,
+            studentName: f.Student?.name || f.StudentRollNo,
+            date: f.createdAt,
+            rating: f.rating,
+            category: f.category,
+            message: f.comment || ''
+          }));
+          setFeedbacks(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to fetch feedbacks', err);
+      }
+    };
+    fetchFeedbacks();
+  }, []);
 
   const categories = [
     { id: 'all', label: 'All Feedback' },
-    { id: 'food-quality', label: 'Food Quality' },
-    { id: 'service', label: 'Service' },
-    { id: 'cleanliness', label: 'Cleanliness' },
-    { id: 'variety', label: 'Variety' },
-    { id: 'general', label: 'General' },
+    { id: 'Food Quality', label: 'Food Quality' },
+    { id: 'Service', label: 'Service' },
+    { id: 'Cleanliness', label: 'Cleanliness' },
+    { id: 'Other', label: 'Other' },
   ];
 
   const filteredFeedbacks =
@@ -76,14 +56,16 @@ export function FeedbackSection() {
       ? feedbacks
       : feedbacks.filter((f) => f.category === selectedCategory);
 
-  const avgRating = (
-    feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length
-  ).toFixed(1);
+  const avgRating = feedbacks.length
+    ? (feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)
+    : '0.0';
 
   const ratingDistribution = [5, 4, 3, 2, 1].map((rating) => ({
     rating,
     count: feedbacks.filter((f) => f.rating === rating).length,
-    percentage: (feedbacks.filter((f) => f.rating === rating).length / feedbacks.length) * 100,
+    percentage: feedbacks.length
+      ? (feedbacks.filter((f) => f.rating === rating).length / feedbacks.length) * 100
+      : 0,
   }));
 
   return (
@@ -178,7 +160,7 @@ export function FeedbackSection() {
                 </div>
               </div>
               <span className="text-xs px-2 py-1 border border-black bg-gray-100">
-                {feedback.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                {feedback.category}
               </span>
             </div>
 
@@ -204,7 +186,7 @@ export function FeedbackSection() {
             <h4 className="font-bold">Positive Trends</h4>
           </div>
           <p className="text-sm text-gray-600">
-            {feedbacks.filter((f) => f.rating >= 4).length} positive reviews this week
+            {feedbacks.filter((f) => f.rating >= 4).length} positive reviews
           </p>
         </div>
         

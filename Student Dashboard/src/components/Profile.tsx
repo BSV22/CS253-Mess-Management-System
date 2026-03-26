@@ -1,12 +1,12 @@
 import { User, Mail, Phone, Building, Calendar, Edit } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   
-  // Mock student data
+  // Mix of real and mock data (since DB doesn't have phone, hostel, course, year yet)
   const [studentData, setStudentData] = useState({
-    name: 'Rajesh Kumar',
+    name: 'Loading...',
     rollNumber: '210XXX',
     email: 'rajesh@iitk.ac.in',
     phone: '+91 98765 43210',
@@ -15,12 +15,40 @@ export function Profile() {
     course: 'B.Tech Computer Science',
     year: '3rd Year',
     joinedDate: 'August 2021',
-    messCard: 'ACTIVE'
+    messCard: 'Loading...'
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Update real fields from DB
+          setStudentData(prev => ({
+            ...prev,
+            name: data.name,
+            rollNumber: data.rollNo,
+            email: data.email,
+            room: data.roomNo || 'Not Assigned',
+            messCard: data.messCardStatus,
+            joinedDate: new Date(data.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile', err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleSave = () => {
     setIsEditing(false);
-    alert('Profile updated successfully!');
+    alert('Profile updated successfully (Mock save)!');
   };
 
   return (

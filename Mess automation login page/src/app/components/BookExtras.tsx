@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Calendar } from 'lucide-react';
 
 interface ExtraItem {
@@ -22,18 +22,34 @@ export function BookExtras() {
     useState<'instant' | 'prebook'>('instant');
 
   // ✅ INSTANT PURCHASE ITEMS (with stock)
-  const [extraItems, setExtraItems] = useState<ExtraItem[]>([
-    { id: '1', name: 'Extra Roti (2 pcs)', price: 10, category: 'Bread', available: true, stock: 30 },
-    { id: '2', name: 'Extra Rice Bowl', price: 15, category: 'Rice', available: true, stock: 25 },
-    { id: '3', name: 'Paneer Curry', price: 50, category: 'Main Course', available: true, stock: 15 },
-    { id: '4', name: 'Egg Curry (2 eggs)', price: 30, category: 'Main Course', available: true, stock: 20 },
-    { id: '5', name: 'Chicken Curry', price: 80, category: 'Main Course', available: true, stock: 10 },
-    { id: '6', name: 'Curd', price: 15, category: 'Dairy', available: true, stock: 18 },
-    { id: '7', name: 'Ice Cream', price: 25, category: 'Dessert', available: true, stock: 12 },
-    { id: '8', name: 'Cold Drink', price: 20, category: 'Beverage', available: true, stock: 40 },
-    { id: '9', name: 'Juice', price: 30, category: 'Beverage', available: true, stock: 22 },
-    { id: '10', name: 'Special Thali', price: 100, category: 'Special', available: false, stock: 0 },
-  ]);
+  const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
+
+  useEffect(() => {
+    const fetchExtras = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/extras', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.items.map((i: any) => ({
+             id: String(i.id),
+             name: i.name,
+             price: parseFloat(i.price),
+             category: i.category,
+             available: i.isAvailable,
+             stock: i.stockQuantity
+          }));
+          setExtraItems(items);
+        }
+      } catch (err) {
+        console.error('Failed to fetch extras:', err);
+      }
+    };
+    fetchExtras();
+  }, [activeSection]);
 
   // ✅ PRE-BOOK STATE — UNCHANGED
   const [preBookings, setPreBookings] = useState<PreBookItem[]>([
@@ -84,13 +100,38 @@ export function BookExtras() {
       return total + (item ? item.price * qty : 0);
     }, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!Object.keys(cart).length) {
       alert('Your cart is empty!');
       return;
     }
-    alert(`Order placed successfully! Total amount: ₹${getTotalAmount()}`);
-    setCart({});
+    
+    try {
+      const token = localStorage.getItem('token');
+      const itemsPayload = Object.entries(cart).map(([itemId, quantity]) => ({
+        itemId: parseInt(itemId),
+        quantity
+      }));
+
+      const res = await fetch('http://localhost:5000/api/extras/buy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ items: itemsPayload })
+      });
+
+      if (res.ok) {
+        alert(`Order placed successfully! Total amount: ₹${getTotalAmount()}`);
+        setCart({});
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Checkout failed');
+      }
+    } catch (err) {
+      alert('Backend connection failed');
+    }
   };
 
   // 🔹 PRE-BOOK LOGIC — UNCHANGED
@@ -102,14 +143,39 @@ export function BookExtras() {
     );
   };
 
-  const handlePreBookSubmit = () => {
+  const handlePreBookSubmit = async () => {
     const bookedItems = preBookings.filter(item => item.booked);
     if (bookedItems.length === 0) {
       alert('Please select at least one item to pre-book');
       return;
     }
-    alert(`Successfully pre-booked ${bookedItems.length} items for tomorrow!`);
-    setPreBookings(prev => prev.map(item => ({ ...item, booked: false })));
+    
+    try {
+      const token = localStorage.getItem('token');
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().split('T')[0];
+
+      for (const item of bookedItems) {
+        await fetch('http://localhost:5000/api/pre-booking', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            dishName: item.dishName,
+            meal: item.meal,
+            date: dateStr
+          })
+        });
+      }
+
+      alert(`Successfully pre-booked ${bookedItems.length} items for tomorrow (${dateStr})!`);
+      setPreBookings(prev => prev.map(item => ({ ...item, booked: false })));
+    } catch (err) {
+      alert("Failed to connect to backend for pre-booking");
+    }
   };
 
   const categories = [...new Set(extraItems.map(item => item.category))];
@@ -238,7 +304,7 @@ export function BookExtras() {
             </p>
           </div>
 
-          {[['Breakfast', breakfastItems], ['Lunch', lunchItems], ['Dinner', dinnerItems]].map(
+          {( [['Breakfast', breakfastItems], ['Lunch', lunchItems], ['Dinner', dinnerItems]] as [string, PreBookItem[]][] ).map(
             ([title, items]) => (
               <div key={title} className="bg-white border rounded-lg p-6 shadow-sm">
                 <h3 className="text-xl font-bold mb-4">{title}</h3>

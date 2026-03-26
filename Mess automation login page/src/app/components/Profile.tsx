@@ -1,57 +1,49 @@
-import { User, Mail, Phone, Building, Calendar, Edit } from 'lucide-react';
-import { useState } from 'react';
+import { User, Mail, Building, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export function Profile() {
-  const [isEditing, setIsEditing] = useState(false);
-  
-  // Mock student data
   const [studentData, setStudentData] = useState({
-    name: 'Rajesh Kumar',
-    rollNumber: '210XXX',
-    email: 'rajesh@iitk.ac.in',
-    phone: '+91 98765 43210',
-    hostel: 'Hall 3',
-    room: 'A-204',
-    course: 'B.Tech Computer Science',
-    year: '3rd Year',
-    joinedDate: 'August 2021',
-    messCard: 'ACTIVE'
+    name: 'Loading...',
+    rollNumber: 'Loading...',
+    email: 'Loading...',
+    room: 'Loading...',
+    joinedDate: 'Loading...',
+    messCard: 'Loading...'
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    alert('Profile updated successfully!');
-  };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Update real fields from DB
+          setStudentData(prev => ({
+            ...prev,
+            name: data.name,
+            rollNumber: data.rollNo,
+            email: data.email,
+            room: data.roomNo || 'Not Assigned',
+            messCard: data.messCardStatus,
+            joinedDate: new Date(data.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile', err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800">Student Profile</h2>
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -77,41 +69,7 @@ export function Profile() {
               <Mail className="w-5 h-5 text-gray-600" />
               <div className="flex-1">
                 <p className="text-sm text-gray-600">Email</p>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={studentData.email}
-                    onChange={(e) => setStudentData({ ...studentData, email: e.target.value })}
-                    className="font-semibold bg-white border border-gray-300 rounded px-2 py-1 w-full"
-                  />
-                ) : (
-                  <p className="font-semibold text-gray-800">{studentData.email}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <Phone className="w-5 h-5 text-gray-600" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-600">Phone</p>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    value={studentData.phone}
-                    onChange={(e) => setStudentData({ ...studentData, phone: e.target.value })}
-                    className="font-semibold bg-white border border-gray-300 rounded px-2 py-1 w-full"
-                  />
-                ) : (
-                  <p className="font-semibold text-gray-800">{studentData.phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <Building className="w-5 h-5 text-gray-600" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-600">Hostel</p>
-                <p className="font-semibold text-gray-800">{studentData.hostel}</p>
+                <p className="font-semibold text-gray-800">{studentData.email}</p>
               </div>
             </div>
           </div>
@@ -121,32 +79,7 @@ export function Profile() {
               <Building className="w-5 h-5 text-gray-600" />
               <div className="flex-1">
                 <p className="text-sm text-gray-600">Room Number</p>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={studentData.room}
-                    onChange={(e) => setStudentData({ ...studentData, room: e.target.value })}
-                    className="font-semibold bg-white border border-gray-300 rounded px-2 py-1 w-full"
-                  />
-                ) : (
-                  <p className="font-semibold text-gray-800">{studentData.room}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <User className="w-5 h-5 text-gray-600" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-600">Course</p>
-                <p className="font-semibold text-gray-800">{studentData.course}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <Calendar className="w-5 h-5 text-gray-600" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-600">Year</p>
-                <p className="font-semibold text-gray-800">{studentData.year}</p>
+                <p className="font-semibold text-gray-800">{studentData.room}</p>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Download, Trash2 } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -15,58 +15,59 @@ interface Student {
 export function StudentsList() {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [students] = useState<Student[]>([
-    {
-      id: '1',
-      name: 'Rahul Kumar',
-      rollNumber: 'ST2301',
-      room: 'A-101',
-      email: 'rahul@iitk.ac.in',
-      phone: '+91 9876543210',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '2',
-      name: 'Priya Singh',
-      rollNumber: 'ST2145',
-      room: 'B-205',
-      email: 'priya@iitk.ac.in',
-      phone: '+91 9876543211',
-      messStatus: 'rebate',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '3',
-      name: 'Amit Sharma',
-      rollNumber: 'ST2089',
-      room: 'C-301',
-      email: 'amit@iitk.ac.in',
-      phone: '+91 9876543212',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '4',
-      name: 'Sneha Patel',
-      rollNumber: 'ST2234',
-      room: 'A-203',
-      email: 'sneha@iitk.ac.in',
-      phone: '+91 9876543213',
-      messStatus: 'active',
-      joinDate: '2023-07-15',
-    },
-    {
-      id: '5',
-      name: 'Vikram Reddy',
-      rollNumber: 'ST2156',
-      room: 'B-108',
-      email: 'vikram@iitk.ac.in',
-      phone: '+91 9876543214',
-      messStatus: 'inactive',
-      joinDate: '2023-07-15',
-    },
-  ]);
+  const [students, setStudents] = useState<Student[]>([]);
+
+  const fetchStudents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('http://localhost:5000/api/students', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = data.map((st: any) => ({
+          id: st.rollNo,
+          name: st.name,
+          rollNumber: st.rollNo,
+          room: st.roomNo || 'N/A',
+          email: st.email,
+          phone: 'N/A',
+          messStatus: (st.messCardStatus || 'inactive').toLowerCase(),
+          joinDate: st.createdAt
+        }));
+        setStudents(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch students', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const handleDelete = async (rollNo: string) => {
+    if (!window.confirm(`Are you sure you want to delete student ${rollNo}?`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/students/${rollNo}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        alert("Student deleted successfully");
+        fetchStudents();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to delete student");
+      }
+    } catch (err) {
+      alert("Network error");
+    }
+  };
 
   const filteredStudents = students.filter(
     (student) =>
@@ -137,6 +138,7 @@ export function StudentsList() {
                 <th className="px-4 py-3 text-left">Phone</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Join Date</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -161,6 +163,15 @@ export function StudentsList() {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {new Date(student.joinDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(student.rollNumber)}
+                      className="p-1 hover:bg-gray-200 rounded group"
+                      title="Delete Student"
+                    >
+                      <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -3,13 +3,59 @@ import { Coffee, UtensilsCrossed, Moon } from 'lucide-react';
 
 export function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [todayMenu, setTodayMenu] = useState<{ breakfast: string[]; lunch: string[]; dinner: string[] }>({
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+  });
+  const [extraTotal, setExtraTotal] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchTodayMenu = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/menu/today', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTodayMenu({
+            breakfast: data.menu?.Breakfast || [],
+            lunch: data.menu?.Lunch || [],
+            dinner: data.menu?.Dinner || [],
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch today menu', err);
+      }
+    };
+
+    const fetchExtrasTotal = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/extras/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setExtraTotal(data.totalAmount || 0);
+        }
+      } catch {
+        // student may not have extras
+      }
+    };
+
+    fetchTodayMenu();
+    fetchExtrasTotal();
   }, []);
 
   const formatDate = (date: Date) => {
@@ -29,46 +75,9 @@ export function Dashboard() {
     });
   };
 
-  // Mock data
-  const todayMenu = {
-    breakfast: [
-      'Poha',
-      'Sambar',
-      'Idli (4 pcs)',
-      'Tea/Coffee',
-      'Banana'
-    ],
-    lunch: [
-      'Roti (5 pcs)',
-      'Rice',
-      'Dal Tadka',
-      'Mix Veg Curry',
-      'Raita',
-      'Pickle',
-      'Salad'
-    ],
-    dinner: [
-      'Roti (5 pcs)',
-      'Rice',
-      'Rajma Masala',
-      'Aloo Gobi',
-      'Curd',
-      'Papad',
-      'Sweet (Gulab Jamun)'
-    ]
-  };
-
-  const bdmrValue = 2100; // BDMR is a single price value
-
-  const billInfo = {
-    monthlyCharge: 4500,
-    extrasPurchased: 450,
-    totalDue: 4950
-  };
-
   return (
     <div className="space-y-6">
-      {/* Campus Image Banner Placeholder - Add your P.K. Kelkar Hall image here */}
+      {/* Campus Image Banner */}
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
           <span className="text-gray-500 text-sm font-semibold">CAMPUS IMAGE PLACEHOLDER</span>
@@ -103,12 +112,14 @@ export function Dashboard() {
               <h3 className="text-xl font-semibold text-gray-800">Breakfast</h3>
             </div>
             <ul className="space-y-2">
-              {todayMenu.breakfast.map((item, index) => (
+              {todayMenu.breakfast.length > 0 ? todayMenu.breakfast.map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-gray-700">
                   <span className="w-2 h-2 bg-gray-700 rounded-full"></span>
                   <span>{item}</span>
                 </li>
-              ))}
+              )) : (
+                <li className="text-gray-400 text-sm">No menu set for today</li>
+              )}
             </ul>
           </div>
 
@@ -121,12 +132,14 @@ export function Dashboard() {
               <h3 className="text-xl font-semibold text-gray-800">Lunch</h3>
             </div>
             <ul className="space-y-2">
-              {todayMenu.lunch.map((item, index) => (
+              {todayMenu.lunch.length > 0 ? todayMenu.lunch.map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-gray-700">
                   <span className="w-2 h-2 bg-gray-700 rounded-full"></span>
                   <span>{item}</span>
                 </li>
-              ))}
+              )) : (
+                <li className="text-gray-400 text-sm">No menu set for today</li>
+              )}
             </ul>
           </div>
 
@@ -139,49 +152,27 @@ export function Dashboard() {
               <h3 className="text-xl font-semibold text-gray-800">Dinner</h3>
             </div>
             <ul className="space-y-2">
-              {todayMenu.dinner.map((item, index) => (
+              {todayMenu.dinner.length > 0 ? todayMenu.dinner.map((item, index) => (
                 <li key={index} className="flex items-center gap-2 text-gray-700">
                   <span className="w-2 h-2 bg-gray-700 rounded-full"></span>
                   <span>{item}</span>
                 </li>
-              ))}
+              )) : (
+                <li className="text-gray-400 text-sm">No menu set for today</li>
+              )}
             </ul>
           </div>
         </div>
       </div>
 
-      {/* BDMR Info and Bill */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* BDMR Value */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <h3 className="text-xl font-bold mb-4 text-gray-800 pb-3 border-b border-gray-200">
-            Today's BDMR
-          </h3>
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-600 mb-2">Base Daily Mess Rate</p>
-            <p className="text-5xl font-bold text-gray-800">₹{bdmrValue}</p>
-          </div>
-        </div>
-
-        {/* Mess Bill */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <h3 className="text-xl font-bold mb-4 text-gray-800 pb-3 border-b border-gray-200">
-            Mess Month Bill (Till Now)
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 border-b border-gray-200">
-              <span className="text-gray-700">Monthly Charge:</span>
-              <span className="font-semibold text-gray-800">₹{billInfo.monthlyCharge}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 border-b border-gray-200">
-              <span className="text-gray-700">Extras Purchased:</span>
-              <span className="font-semibold text-orange-600">₹{billInfo.extrasPurchased}</span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-gray-100 rounded-lg mt-4">
-              <span className="font-bold text-lg text-gray-800">Total Due:</span>
-              <span className="font-bold text-2xl text-gray-800">₹{billInfo.totalDue}</span>
-            </div>
-          </div>
+      {/* Extras Summary */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+        <h3 className="text-xl font-bold mb-4 text-gray-800 pb-3 border-b border-gray-200">
+          Extras Purchased (This Month)
+        </h3>
+        <div className="text-center py-8">
+          <p className="text-sm text-gray-600 mb-2">Total Extras Spent</p>
+          <p className="text-5xl font-bold text-gray-800">₹{extraTotal}</p>
         </div>
       </div>
     </div>

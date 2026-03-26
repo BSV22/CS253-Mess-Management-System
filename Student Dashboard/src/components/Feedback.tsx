@@ -1,50 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Star, Send } from 'lucide-react';
 
 interface FeedbackItem {
-  id: string;
-  date: string;
+  id?: string;
+  createdAt: string;
   category: string;
   rating: number;
   comment: string;
-  status: 'pending' | 'reviewed' | 'resolved';
+  status?: 'pending' | 'reviewed' | 'resolved'; // Status currently simulated if backend doesn't store it
 }
 
 export function Feedback() {
   const [rating, setRating] = useState(0);
-  const [category, setCategory] = useState('food-quality');
+  const [category, setCategory] = useState('Food Quality');
   const [comment, setComment] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [previousFeedback, setPreviousFeedback] = useState<FeedbackItem[]>([]);
 
-  // Mock previous feedback
-  const previousFeedback: FeedbackItem[] = [
-    {
-      id: '1',
-      date: '2026-01-18',
-      category: 'Food Quality',
-      rating: 4,
-      comment: 'The paneer curry was excellent today!',
-      status: 'reviewed'
-    },
-    {
-      id: '2',
-      date: '2026-01-15',
-      category: 'Service',
-      rating: 3,
-      comment: 'Long waiting time during lunch hours.',
-      status: 'resolved'
-    },
-    {
-      id: '3',
-      date: '2026-01-10',
-      category: 'Cleanliness',
-      rating: 5,
-      comment: 'Dining hall is very clean and well-maintained.',
-      status: 'reviewed'
-    }
-  ];
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('http://localhost:5000/api/feedback/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) setPreviousFeedback(data);
+      } catch (err) {
+        console.error('Failed to fetch feedback', err);
+      }
+    };
+    fetchFeedback();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
       alert('Please provide a rating');
@@ -54,10 +44,32 @@ export function Feedback() {
       alert('Please write your feedback');
       return;
     }
-    alert('Feedback submitted successfully! Thank you for your input.');
-    setRating(0);
-    setCategory('food-quality');
-    setComment('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ rating, comment, category })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert('Feedback submitted successfully! Thank you for your input.');
+        setPreviousFeedback([data.feedback, ...previousFeedback]);
+        setRating(0);
+        setCategory('Food Quality');
+        setComment('');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to submit feedback');
+      }
+    } catch (err) {
+      alert('Backend unreachable');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -91,13 +103,10 @@ export function Feedback() {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
             >
-              <option value="food-quality">Food Quality</option>
-              <option value="service">Service</option>
-              <option value="cleanliness">Cleanliness</option>
-              <option value="menu-variety">Menu Variety</option>
-              <option value="staff-behavior">Staff Behavior</option>
-              <option value="timing">Timing</option>
-              <option value="other">Other</option>
+              <option value="Food Quality">Food Quality</option>
+              <option value="Service">Service</option>
+              <option value="Cleanliness">Cleanliness</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -166,8 +175,8 @@ export function Feedback() {
           <p className="text-gray-500 text-center py-8">No previous feedback</p>
         ) : (
           <div className="space-y-4">
-            {previousFeedback.map((feedback) => (
-              <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
+            {previousFeedback.map((feedback: FeedbackItem) => (
+              <div key={feedback.id || Math.random().toString()} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
@@ -181,10 +190,10 @@ export function Feedback() {
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
-                        {feedback.status.charAt(0).toUpperCase() + feedback.status.slice(1)}
+                        {feedback.status ? feedback.status.charAt(0).toUpperCase() + feedback.status.slice(1) : 'Received'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500">{formatDate(feedback.date)}</p>
+                    <p className="text-sm text-gray-500">{formatDate(feedback.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     {[...Array(feedback.rating)].map((_, i) => (
