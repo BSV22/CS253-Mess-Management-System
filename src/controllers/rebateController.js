@@ -1,8 +1,26 @@
-// controllers/rebateController.js
-
 const Rebate = require("../models/Rebate");
 const Student = require("../models/Student");
+const { Config } = require("../models/Index");
 const { Op } = require("sequelize");
+
+const calculateAmount = async (startDate) => {
+  const date = new Date(startDate);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const configKey = `BDMR_${year}_${month}`;
+  
+  const bdmrConfig = await Config.findByPk(configKey);
+  if (!bdmrConfig) return null; 
+  
+  return parseFloat(bdmrConfig.value);
+};
+
+const getDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end - start);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
 
 exports.applyRebate = async (req, res) => {
   try {
@@ -43,16 +61,20 @@ exports.applyRebate = async (req, res) => {
       });
     }
 
+    const bdmr = await calculateAmount(startDate);
+    const amount = bdmr ? (getDays(startDate, endDate) * bdmr) : 0;
+
     const rebate = await Rebate.create({
       StudentRollNo: req.user.rollNo,
       startDate,
       endDate,
       reason,
-      status: "Pending"
+      status: "Pending",
+      amount
     });
 
     res.json({
-      message: "Rebate request submitted",
+      message: bdmr ? "Rebate request submitted" : "Rebate submitted (Note: BDMR not set for this month, amount is 0)",
       rebate
     });
 
@@ -145,11 +167,15 @@ exports.approveRebate = async (req, res) => {
       return res.status(404).json({ error: "Rebate not found" });
     }
 
+    const bdmr = await calculateAmount(rebate.startDate);
+    const amount = bdmr ? (getDays(rebate.startDate, rebate.endDate) * bdmr) : 0;
+    
     rebate.status = "Approved";
+    rebate.amount = amount;
     await rebate.save();
 
     res.json({
-      message: "Rebate approved",
+      message: bdmr ? "Rebate approved" : "Rebate approved (Note: BDMR for this month was not set, amount is 0)",
       rebate
     });
 

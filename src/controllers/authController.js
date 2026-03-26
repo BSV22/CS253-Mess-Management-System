@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const Student = require("../models/Student");
 const MessManager = require("../models/MessManager");
 const { sendOTPEmail } = require("../utils/mailer");
+const axios = require("axios");
 
 const otpStore = {};
 
@@ -152,6 +153,83 @@ exports.login = async (req, res) => {
       status: user.status
     });
 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.loginFace = async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: "No image received" });
+
+    const pythonResponse = await axios.post('http://localhost:8000/recognize-face/', { image });
+
+    if (pythonResponse.data.status === "success") {
+        const id_key = parseInt(pythonResponse.data.userId); 
+        const user = await Student.findOne({ where: { id_key } });
+        
+        if (!user) {
+            return res.status(400).json({ error: "Face recognized, but user not found in database. Please register." });
+        }
+
+        if (user.status === "Pending") {
+            return res.status(403).json({ error: "Your account is pending approval by manager" });
+        }
+        if (user.status === "Rejected") {
+            return res.status(403).json({ error: "Your account has been rejected" });
+        }
+
+        const token = generateToken(user, "student");
+        res.json({
+            message: "Login successful",
+            token,
+            role: "student",
+            status: user.status,
+            user: { name: user.name, rollNo: user.rollNo, email: user.email }
+        });
+    } else {
+        if (pythonResponse.data.status === "noface") {
+            return res.status(400).json({ error: "No face detected in webcam." });
+        } else if (pythonResponse.data.status === "error") {
+            return res.status(500).json({ error: pythonResponse.data.message });
+        } else {
+            return res.status(400).json({ error: "Face not recognized." });
+        }
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.registerFace = async (req, res) => {
+  try {
+    const { images } = req.body;
+    if (!images || images.length === 0) return res.status(400).json({ error: "No images received" });
+
+    if (req.user.role !== "student") {
+        return res.status(403).json({ error: "Only students can register faces" });
+    }
+
+    const student = await Student.findByPk(req.user.rollNo);
+    if (!student) {
+        return res.status(500).json({ error: "Student not found." });
+    }
+
+    // Pass the numeric id_key for OpenCV
+    const pythonResponse = await axios.post(`http://localhost:8000/train-new-face/${student.id_key}`, 
+        { images }, 
+        { timeout: 180000 } 
+    );
+
+    if (pythonResponse.data.status === "error") {
+        return res.status(400).json({ error: pythonResponse.data.message });
+    }
+
+    return res.status(201).json({ 
+        message: "Face Registration successful! AI trained.", 
+        status: "registered"
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

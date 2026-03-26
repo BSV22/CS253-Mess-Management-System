@@ -12,9 +12,13 @@ router.post("/resend-otp", authController.resendOTP);
 
 // login
 router.post("/login", authController.login);
+router.post("/login-face", authController.loginFace);
 
 // change password
 router.put("/change-password", protect, authController.changePassword);
+
+// face register (must be authenticated so we know whose face to train)
+router.post("/register-face", protect, authController.registerFace);
 
 // profile
 router.get("/profile", protect, authController.getProfile);

@@ -16,6 +16,10 @@ const Rebate = sequelize.define('Rebate', {
     status: {
         type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
         defaultValue: 'Pending'
+    },
+    amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
     }
 }, { timestamps: true });
 

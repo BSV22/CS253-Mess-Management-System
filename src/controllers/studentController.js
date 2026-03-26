@@ -110,6 +110,28 @@ exports.getAllStudents = async (req, res) => {
     });
 
     res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteStudent = async (req, res) => {
+  try {
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ error: "Only manager allowed" });
+    }
+
+    const student = await Student.findByPk(req.params.rollNo);
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    await student.destroy();
+
+    res.json({
+      message: "Student deleted successfully"
+    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });

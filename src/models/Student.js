@@ -7,6 +7,12 @@ const Student = sequelize.define('Student', {
         primaryKey: true,
         allowNull: false
     },
+    id_key: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        unique: true
+    },
+    
     name: {
         type: DataTypes.STRING,
         allowNull: false
@@ -17,6 +23,7 @@ const Student = sequelize.define('Student', {
         allowNull: false,
         validate: { isEmail: true }
     },
+    
     password: {
         type: DataTypes.STRING,
         allowNull: false
