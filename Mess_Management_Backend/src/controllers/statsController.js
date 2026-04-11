@@ -7,7 +7,7 @@ exports.getManagerStats = async (req, res) => {
       return res.status(403).json({ error: "Only manager allowed" });
     }
 
-    const totalStudents = await Student.count();
+    const totalStudents = await Student.count({ where: { status: "Approved" } });
     const pendingRebates = await Rebate.count({ where: { status: "Pending" } });
     const activePolls = await Poll.count(); // Could filter by expiration if field exists
     const newPersonRequests = await Student.count({ where: { status: "Pending" } });

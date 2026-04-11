@@ -20,7 +20,7 @@ export function NewPersonRequests() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await fetch(`${API_HOST}/api/students/pending`, {
+        const res = await fetch(`${API_HOST}/api/students/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -36,8 +36,10 @@ export function NewPersonRequests() {
             requestDate: st.createdAt,
             status: st.status.toLowerCase(),
           }));
+          // Sort in descending order by requestDate
+          mapped.sort((a: PersonRequest, b: PersonRequest) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
           setRequests(mapped);
-        }
+        } 
       } catch (err) {
         console.error('Failed to fetch pending requests', err);
       }

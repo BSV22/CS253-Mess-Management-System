@@ -11,6 +11,7 @@ interface Student {
   messStatus: 'active' | 'suspended' | 'pending';
   hasFaceId: boolean;
   joinDate: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export function StudentsList() {
@@ -36,7 +37,8 @@ export function StudentsList() {
           phone: st.phone || 'N/A',
           messStatus: (st.messCardStatus || 'pending').toLowerCase() as any,
           hasFaceId: !!st.facePhoto,
-          joinDate: st.createdAt
+          joinDate: st.createdAt,
+          status: st.status.toLowerCase() as any
         }));
         setStudents(mapped);
       }
@@ -95,9 +97,10 @@ export function StudentsList() {
 
   const filteredStudents = students.filter(
     (student) =>
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.messStatus === 'active' || student.messStatus === 'pending') &&
+      (student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.room.toLowerCase().includes(searchTerm.toLowerCase())
+      student.room.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: Student['messStatus']) => {
@@ -138,13 +141,13 @@ export function StudentsList() {
         
         <div className="flex gap-2 text-sm">
           <span className="px-3 py-2 bg-green-100 border border-green-600">
-            Active: {students.filter((s) => s.messStatus === 'active').length}
+            Active: {filteredStudents.filter((s) => s.messStatus === 'active').length}
           </span>
           <span className="px-3 py-2 bg-yellow-100 border border-yellow-600">
-            Pending: {students.filter((s) => s.messStatus === 'pending').length}
+            Pending: {filteredStudents.filter((s) => s.messStatus === 'pending').length}
           </span>
           <span className="px-3 py-2 bg-red-100 border border-red-600">
-            Suspended: {students.filter((s) => s.messStatus === 'suspended').length}
+            Suspended: {filteredStudents.filter((s) => s.messStatus === 'suspended').length}
           </span>
         </div>
       </div>
