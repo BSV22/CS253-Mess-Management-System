@@ -49,8 +49,12 @@ export function StudentsList() {
     fetchStudents();
   }, []);
 
-  const toggleStatus = async (rollNo: string) => {
+  const toggleStatus = async (rollNo: string, status: Student['messStatus']) => {
     try {
+      if (status==='pending') {
+        alert("Cannot change status of a pending student. Please approve or reject their application first.");
+        return;
+      }
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_HOST}/api/students/toggle-status/${rollNo}`, {
         method: 'PUT',
@@ -191,7 +195,7 @@ export function StudentsList() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => toggleStatus(student.rollNumber)}
+                        onClick={() => toggleStatus(student.rollNumber, student.messStatus)}
                         className={`px-2 py-1 text-xs border rounded transition-colors ${
                           student.messStatus === 'active' 
                             ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 

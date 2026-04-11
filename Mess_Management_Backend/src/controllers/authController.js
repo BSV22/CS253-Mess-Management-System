@@ -26,8 +26,10 @@ exports.registerStudent = async (req, res) => {
     }
 
     const existing = await Student.findOne({ where: { rollNo } });
-    if (existing) {
+    if (existing && existing.status !== "Rejected") {
       return res.status(400).json({ error: "Student already exists" });
+    }else if (existing && existing.status === "Rejected") {
+      await existing.destroy(); // allow re-registration if previously rejected
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

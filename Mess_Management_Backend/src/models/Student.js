@@ -34,7 +34,7 @@ const Student = sequelize.define('Student', {
     },
     messCardStatus: {
         type: DataTypes.ENUM('Active', 'Pending', 'Suspended'),
-        defaultValue: 'Active'
+        defaultValue: 'Pending'
     },
     status: {
         type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
