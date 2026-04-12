@@ -68,3 +68,29 @@ exports.getAllBookings = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.updateBookingStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ error: "Only manager allowed" });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['Approved', 'Rejected', 'Fulfilled', 'Cancelled'].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const booking = await PreBooking.findByPk(id);
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    res.json({ message: `Booking ${status}`, booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

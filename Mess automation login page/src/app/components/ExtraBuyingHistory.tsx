@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, ShoppingBag } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Calendar } from 'lucide-react';
 
 const API_HOST = import.meta.env.VITE_API_HOST || 'http://localhost:5000';
 
@@ -14,26 +14,35 @@ interface PurchaseRecord {
   totalAmount: number;
 }
 
-interface Analytics {
-  totalRevenue: number;
-  items: Record<string, { quantity: number; revenue: number }>;
-}
-
 export function ExtraBuyingHistory() {
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics>({ totalRevenue: 0, items: {} });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [analytics, setAnalytics] = useState<{ totalRevenue: number; items: Record<string, { quantity: number; revenue: number }> }>({ totalRevenue: 0, items: {} });
+  
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
   const [errorPurchases, setErrorPurchases] = useState<string | null>(null);
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    setLoadingAnalytics(true);
+    setLoadingPurchases(true);
+    setErrorPurchases(null);
+
     // Fetch analytics (summary)
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch(`${API_HOST}/api/extras/analytics`, {
+        const res = await fetch(`${API_HOST}/api/extras/analytics?month=${selectedMonth}&year=${selectedYear}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -50,7 +59,7 @@ export function ExtraBuyingHistory() {
     // Fetch individual purchase records
     const fetchPurchases = async () => {
       try {
-        const res = await fetch(`${API_HOST}/api/extras/purchases`, {
+        const res = await fetch(`${API_HOST}/api/extras/purchases?month=${selectedMonth}&year=${selectedYear}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -69,7 +78,7 @@ export function ExtraBuyingHistory() {
 
     fetchAnalytics();
     fetchPurchases();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const totalRevenue = analytics.totalRevenue;
   const popularItems = Object.entries(analytics.items || {})
@@ -89,6 +98,29 @@ export function ExtraBuyingHistory() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Extra Buying History</h2>
+        
+        {/* Month/Year Filter UI */}
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-gray-400" />
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="border-2 border-black px-3 py-1 bg-white focus:outline-none text-sm font-medium"
+          >
+            {months.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="border-2 border-black px-3 py-1 bg-white focus:outline-none text-sm font-medium"
+          >
+            {years.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Statistics Cards */}

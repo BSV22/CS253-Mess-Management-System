@@ -249,7 +249,17 @@ exports.getExtrasAnalytics = async (req, res) => {
       return res.status(403).json({ error: "Only manager allowed" });
     }
 
+    const { month, year } = req.query;
+    let where = {};
+
+    if (month && year) {
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
+      where.purchaseDate = { [Op.between]: [startDate, endDate] };
+    }
+
     const purchases = await ExtraPurchase.findAll({
+      where,
       include: [ExtraItem]
     });
 
@@ -289,7 +299,17 @@ exports.getPurchaseHistory = async (req, res) => {
       return res.status(403).json({ error: "Only manager allowed" });
     }
 
+    const { month, year } = req.query;
+    let where = {};
+
+    if (month && year) {
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
+      where.purchaseDate = { [Op.between]: [startDate, endDate] };
+    }
+
     const purchases = await ExtraPurchase.findAll({
+      where,
       include: [
         { model: ExtraItem, attributes: ["name", "price"] },
         { model: Student, attributes: ["rollNo", "name"] }

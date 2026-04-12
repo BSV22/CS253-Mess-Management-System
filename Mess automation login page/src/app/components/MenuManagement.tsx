@@ -268,6 +268,28 @@ export function MenuManagement() {
     } catch { /* */ }
   };
 
+  const handleUpdateBookingStatus = async (id: number, status: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_HOST}/api/pre-booking/status/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        fetchBookings();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update status");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
+
   const handleCreateSpecial = async () => {
     if (!newSpecialName || !newSpecialPrice) return alert("Please enter name and price");
     try {
@@ -386,6 +408,7 @@ export function MenuManagement() {
                 <th className="px-4 py-2 text-left">Meal</th>
                 <th className="px-4 py-2 text-left">Date</th>
                 <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -395,12 +418,38 @@ export function MenuManagement() {
                   <td className="px-4 py-2">{b.dishName}</td>
                   <td className="px-4 py-2 capitalize">{b.meal}</td>
                   <td className="px-4 py-2">{b.date}</td>
-                  <td className="px-4 py-2 font-medium">{b.status}</td>
+                  <td className="px-4 py-2 font-medium">
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      b.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                      b.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    {b.status === 'Pending' && (
+                      <div className="flex justify-center gap-2">
+                        <button 
+                          onClick={() => handleUpdateBookingStatus(b.id, 'Approved')}
+                          className="px-2 py-1 bg-green-600 text-white text-xs hover:bg-green-700 transition-colors"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateBookingStatus(b.id, 'Rejected')}
+                          className="px-2 py-1 bg-red-600 text-white text-xs hover:bg-red-700 transition-colors"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
               {currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">No active pre-bookings found</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">No active pre-bookings found</td>
                 </tr>
               )}
             </tbody>

@@ -9,7 +9,7 @@ exports.getManagerStats = async (req, res) => {
 
     const totalStudents = await Student.count({ where: { status: "Approved" } });
     const pendingRebates = await Rebate.count({ where: { status: "Pending" } });
-    const activePolls = await Poll.count(); // Could filter by expiration if field exists
+    const activePolls = await Poll.count({ where: { status: "active" } });
     const newPersonRequests = await Student.count({ where: { status: "Pending" } });
     
     // Today's Pre-bookings

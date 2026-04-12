@@ -53,6 +53,12 @@ exports.protect = async (req, res, next) => {
       req.user.role = "manager";
     }
 
+    // Standardize role to lowercase and trimmed for consistent permission checks
+    if (req.user) {
+      req.user.role = (req.user.role || "").toLowerCase().trim();
+    }
+
+    console.log(`[AUTH] Decoded Role: ${decoded.role}, Set req.user.role: ${req.user.role}, User ID: ${decoded.id}`);
     next();
 
   } catch (err) {

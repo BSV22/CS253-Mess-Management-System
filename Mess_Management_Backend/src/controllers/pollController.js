@@ -3,6 +3,7 @@
 const Poll = require("../models/Poll");
 const PollOption = require("../models/PollOption");
 const Vote = require("../models/Vote");
+const sequelize = require("../config/db");
 
 
 exports.createPoll = async (req, res) => {
@@ -134,6 +135,19 @@ exports.getAllPolls = async (req, res) => {
   try {
     const polls = await Poll.findAll({
       include: [{ model: PollOption }],
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(DISTINCT "StudentRollNo")
+              FROM "Votes" AS "Vote"
+              WHERE "Vote"."PollId" = "Poll"."id"
+            )`),
+            'participantCount'
+          ]
+        ]
+      },
+      order: [['createdAt', 'DESC']]
     });
 
     res.json(polls);
