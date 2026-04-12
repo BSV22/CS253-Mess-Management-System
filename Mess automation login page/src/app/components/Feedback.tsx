@@ -14,6 +14,7 @@ export function Feedback() {
   const [rating, setRating] = useState(0);
   const [category, setCategory] = useState('Food Quality');
   const [comment, setComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [previousFeedback, setPreviousFeedback] = useState<FeedbackItem[]>([]);
 
@@ -53,7 +54,7 @@ export function Feedback() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ rating, comment, category })
+        body: JSON.stringify({ rating, comment, category, isAnonymous })
       });
 
       if (res.ok) {
@@ -63,6 +64,7 @@ export function Feedback() {
         setRating(0);
         setCategory('Food Quality');
         setComment('');
+        setIsAnonymous(false);
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to submit feedback');
@@ -154,6 +156,20 @@ export function Feedback() {
               rows={6}
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 resize-none"
             />
+          </div>
+
+          {/* Anonymous Toggle */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="anonymous"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-800"
+            />
+            <label htmlFor="anonymous" className="text-sm font-semibold text-gray-700">
+              Submit anonymously
+            </label>
           </div>
 
           {/* Submit Button */}

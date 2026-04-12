@@ -13,6 +13,10 @@ const Feedback = sequelize.define('Feedback', {
     category: {
         type: DataTypes.ENUM('Food Quality', 'Cleanliness', 'Service', 'Other'),
         defaultValue: 'Food Quality'
+    },
+    isAnonymous: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 }, { timestamps: true });
 

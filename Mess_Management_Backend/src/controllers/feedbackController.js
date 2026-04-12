@@ -10,7 +10,7 @@ exports.createFeedback = async (req, res) => {
       return res.status(403).json({ error: "Only students allowed" });
     }
 
-    const { rating, comment, category } = req.body;
+    const { rating, comment, category, isAnonymous } = req.body;
 
     if (!rating) {
       return res.status(400).json({ error: "Rating is required" });
@@ -41,7 +41,8 @@ exports.createFeedback = async (req, res) => {
       StudentRollNo: req.user.rollNo,
       rating,
       comment,
-      category
+      category,
+      isAnonymous: isAnonymous || false
     });
 
     res.json({
@@ -83,7 +84,19 @@ exports.getAllFeedback = async (req, res) => {
       order: [["createdAt", "DESC"]]
     });
 
-    res.json(feedbacks);
+    const parsedFeedbacks = feedbacks.map(f => {
+      const raw = f.toJSON();
+      if (raw.isAnonymous) {
+        raw.StudentRollNo = "Hidden";
+        if (raw.Student) {
+          raw.Student.name = "Anonymous";
+          raw.Student.rollNo = "Hidden";
+        }
+      }
+      return raw;
+    });
+
+    res.json(parsedFeedbacks);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -103,7 +116,19 @@ exports.getFeedbackByCategory = async (req, res) => {
       include: [{ model: Student }]
     });
 
-    res.json(feedbacks);
+    const parsedFeedbacks = feedbacks.map(f => {
+      const raw = f.toJSON();
+      if (raw.isAnonymous) {
+        raw.StudentRollNo = "Hidden";
+        if (raw.Student) {
+          raw.Student.name = "Anonymous";
+          raw.Student.rollNo = "Hidden";
+        }
+      }
+      return raw;
+    });
+
+    res.json(parsedFeedbacks);
 
   } catch (err) {
     res.status(500).json({ error: err.message });

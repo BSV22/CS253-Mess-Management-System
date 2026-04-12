@@ -18,9 +18,9 @@ exports.addExtraItem = async (req, res) => {
       return res.status(403).json({ error: "Only manager allowed" });
     }
 
-    // Check if item with exact name already exists
+    // Check if item with exact name already exists (case-insensitive)
     const existingItem = await ExtraItem.findOne({ 
-      where: { name: req.body.name } 
+      where: { name: { [Op.iLike]: req.body.name } } 
     });
 
     if (existingItem) {
