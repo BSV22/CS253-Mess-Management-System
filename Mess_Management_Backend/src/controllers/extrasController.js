@@ -148,70 +148,84 @@ exports.buyExtras = async (req, res) => {
     let totalAmount = 0;
     const purchases = [];
 
-    for (const item of items) {
-      const extra = await ExtraItem.findByPk(item.itemId);
+    const transaction = await ExtraItem.sequelize.transaction();
 
-      if (!extra) {
-        return res.status(404).json({
-          error: `Item not found`
+    try {
+      for (const item of items) {
+        const extra = await ExtraItem.findByPk(item.itemId, { transaction });
+
+        if (!extra) {
+          await transaction.rollback();
+          return res.status(404).json({
+            error: `Item not found`
+          });
+        }
+
+        if (!extra.isAvailable) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `${extra.name} is not available`
+          });
+        }
+
+        if (
+          !(extra.day === "All" || extra.day === today) ||
+          !(extra.mealType === "All" || extra.mealType === currentMeal)
+        ) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `${extra.name} not available for ${today} ${currentMeal}`
+          });
+        }
+
+        if (!item.quantity || item.quantity <= 0) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Invalid quantity for ${extra.name}`
+          });
+        }
+
+        if (extra.stockQuantity < item.quantity) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Not enough stock for ${extra.name}`
+          });
+        }
+
+        const price = parseFloat(extra.price) * item.quantity;
+
+        extra.stockQuantity -= item.quantity;
+        await extra.save({ transaction });
+
+        const purchase = await ExtraPurchase.create({
+          StudentRollNo: studentId,
+          ExtraItemId: extra.id,
+          quantity: item.quantity,
+          totalPrice: price
+        }, { transaction });
+
+        totalAmount += price;
+
+        purchases.push({
+          itemName: extra.name,
+          quantity: item.quantity,
+          price: price
         });
       }
 
-      if (!extra.isAvailable) {
-        return res.status(400).json({
-          error: `${extra.name} is not available`
-        });
-      }
+      await transaction.commit();
 
-      if (
-        !(extra.day === "All" || extra.day === today) ||
-        !(extra.mealType === "All" || extra.mealType === currentMeal)
-      ) {
-        return res.status(400).json({
-          error: `${extra.name} not available for ${today} ${currentMeal}`
-        });
-      }
-
-      if (!item.quantity || item.quantity <= 0) {
-        return res.status(400).json({
-          error: `Invalid quantity for ${extra.name}`
-        });
-      }
-
-      if (extra.stockQuantity < item.quantity) {
-        return res.status(400).json({
-          error: `Not enough stock for ${extra.name}`
-        });
-      }
-
-      const price = parseFloat(extra.price) * item.quantity;
-
-      extra.stockQuantity -= item.quantity;
-      await extra.save();
-
-      const purchase = await ExtraPurchase.create({
-        StudentRollNo: studentId,
-        ExtraItemId: extra.id,
-        quantity: item.quantity,
-        totalPrice: price
+      res.json({
+        message: "Purchase successful",
+        day: today,
+        mealType: currentMeal,
+        totalAmount,
+        purchases
       });
-
-      totalAmount += price;
-
-      purchases.push({
-        itemName: extra.name,
-        quantity: item.quantity,
-        price: price
-      });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
     }
-
-    res.json({
-      message: "Purchase successful",
-      day: today,
-      mealType: currentMeal,
-      totalAmount,
-      purchases
-    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
