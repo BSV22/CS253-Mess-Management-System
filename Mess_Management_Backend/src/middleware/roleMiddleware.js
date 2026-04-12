@@ -14,7 +14,7 @@ exports.allowRoles = (...roles) => {
         });
       }
 
-      console.log(`[ROLE] Access Granted. User Role: ${finalUserRole}`);
+      // console.log(`[ROLE] Access Granted. User Role: ${finalUserRole}`);
       next();
 
     } catch (err) {
