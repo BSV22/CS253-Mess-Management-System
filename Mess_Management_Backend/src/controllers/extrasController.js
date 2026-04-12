@@ -20,6 +20,11 @@ exports.addExtraItem = async (req, res) => {
       return res.status(403).json({ error: "Only manager allowed" });
     }
 
+    // Check if price is provided and negative
+    if (req.body.price !== undefined && Number(req.body.price) < 0) {
+      return res.status(400).json({ error: "Price cannot be negative" });
+    }
+
     // Check if item with exact name already exists (case-insensitive)
     const existingItem = await ExtraItem.findOne({
       where: { name: { [Op.iLike]: req.body.name } }
@@ -44,6 +49,10 @@ exports.updateExtraItem = async (req, res) => {
     const userRole = req.userRole || (req.user && req.user.role);
     if (userRole !== "manager") {
       return res.status(403).json({ error: "Only manager allowed" });
+    }
+
+    if (req.body.price !== undefined && Number(req.body.price) < 0) {
+      return res.status(400).json({ error: "Price cannot be negative" });
     }
 
     const item = await ExtraItem.findByPk(req.params.id);
