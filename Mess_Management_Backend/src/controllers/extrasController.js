@@ -3,6 +3,7 @@
 const ExtraItem = require("../models/ExtraItem");
 const ExtraPurchase = require("../models/ExtraPurchase");
 const Student = require("../models/Student");
+const Transaction = require("../models/Transaction");
 const { Op } = require("sequelize");
 
 const getCurrentMeal = () => {
@@ -184,6 +185,15 @@ exports.buyExtras = async (req, res) => {
           ExtraItemId: extra.id,
           quantity: item.quantity,
           totalPrice: price
+        }, { transaction });
+
+        await Transaction.create({
+          StudentRollNo: studentId,
+          itemName: extra.name,
+          amount: price,
+          type: 'extra',
+          status: 'Completed',
+          date: new Date()
         }, { transaction });
 
         totalAmount += price;
