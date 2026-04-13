@@ -3,11 +3,14 @@
 const Vote = require("../models/Vote");
 const Poll = require("../models/Poll");
 const PollOption = require("../models/PollOption");
+const sequelize = require("../config/db");
 
 
 exports.castVote = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     if (req.user.role !== "student") {
+      await transaction.rollback();
       return res.status(403).json({ error: "Only students can vote" });
     }
 
@@ -15,20 +18,23 @@ exports.castVote = async (req, res) => {
     const studentId = req.user.rollNo;
 
     // check poll
-    const poll = await Poll.findByPk(pollId);
+    const poll = await Poll.findByPk(pollId, { transaction });
     if (!poll || poll.status !== "active") {
+      await transaction.rollback();
       return res.status(400).json({ error: "Voting not active" });
     }
 
     // Get all available meal types for this poll
     const optionsContext = await PollOption.findAll({
-      where: { PollId: pollId }
+      where: { PollId: pollId },
+      transaction
     });
     const availableMealTypes = [...new Set(optionsContext.map(o => o.mealType))];
 
     // check full selection
     const missingMeals = availableMealTypes.filter(meal => !votes[meal]);
     if (missingMeals.length > 0) {
+      await transaction.rollback();
       return res.status(400).json({
         error: `Select option for: ${missingMeals.join(', ')}`,
       });
@@ -37,6 +43,7 @@ exports.castVote = async (req, res) => {
     // check already voted to handle vote update
     const existingVotes = await Vote.findAll({
       where: { PollId: pollId, StudentRollNo: studentId },
+      transaction
     });
 
     // First validate all new options
@@ -46,9 +53,11 @@ exports.castVote = async (req, res) => {
 
       const option = await PollOption.findOne({
         where: { id: optionId, PollId: pollId, mealType },
+        transaction
       });
 
       if (!option) {
+        await transaction.rollback();
         return res.status(400).json({
           error: `Invalid option for ${mealType}`,
         });
@@ -62,14 +71,15 @@ exports.castVote = async (req, res) => {
       isUpdate = true;
       // Decrement the old options
       for (const oldVote of existingVotes) {
-        const oldOption = await PollOption.findByPk(oldVote.PollOptionId);
+        const oldOption = await PollOption.findByPk(oldVote.PollOptionId, { transaction });
         if (oldOption && oldOption.votes > 0) {
-          await oldOption.decrement("votes");
+          await oldOption.decrement("votes", { by: 1, transaction });
         }
       }
       // Delete old votes
       await Vote.destroy({
-        where: { PollId: pollId, StudentRollNo: studentId }
+        where: { PollId: pollId, StudentRollNo: studentId },
+        transaction
       });
     }
 
@@ -79,14 +89,16 @@ exports.castVote = async (req, res) => {
         PollId: pollId,
         PollOptionId: optionId,
         StudentRollNo: studentId,
-      });
+      }, { transaction });
 
-      await option.increment("votes");
+      await option.increment("votes", { by: 1, transaction });
     }
 
+    await transaction.commit();
     res.json({ message: isUpdate ? "Vote updated successfully!" : "Vote submitted successfully!" });
 
   } catch (err) {
+    await transaction.rollback();
     res.status(500).json({ error: err.message });
   }
 };
