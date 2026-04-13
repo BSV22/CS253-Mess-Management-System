@@ -237,7 +237,7 @@ export function Vote() {
                   <ThumbsUp className="w-5 h-5" /> {hasVoted ? 'Update Vote' : 'Submit Vote'}
                 </button>
 
-                <div className="mt-3 text-center text-sm text-gray-500">Total votes: {totalVotes}</div>
+                <div className="mt-3 text-center text-sm text-gray-500">Total votes: {totalVotes/3}</div>
               </div>
             );
           })}
