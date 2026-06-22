@@ -19,6 +19,22 @@ The result is a unified system for student registration, manager approval, and s
 
 ---
 
+
+##Contributors
+
+- Shreyansh Dewangan
+- Rishith Jalagam
+- B Mahath
+- Parth Parashar
+- Priyanshi Meena
+- Inapakurti Rajesh
+- Eranki Venkata Jhanani
+- Basavakiran Shivanand Deshmukh
+- Rohan Kumar
+- Siddhant Singh
+
+---
+
 ##  Table of Contents
 
 - [Features](#-features)
