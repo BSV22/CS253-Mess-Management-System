@@ -20,7 +20,7 @@ The result is a unified system for student registration, manager approval, and s
 ---
 
 
-##Contributors
+## Contributors
 
 - Shreyansh Dewangan
 - Rishith Jalagam
